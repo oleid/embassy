@@ -71,11 +71,15 @@ async fn main_task(spawner: Spawner) {
     socket.set_timeout(Some(Duration::from_secs(10)));
 
     let remote_endpoint = (Ipv4Address::new(192, 168, 69, 100), 8000);
-    info!("connecting to {:?}...", remote_endpoint);
-    let r = socket.connect(remote_endpoint).await;
-    if let Err(e) = r {
-        warn!("connect error: {:?}", e);
-        return;
+    loop {
+        info!("connecting to {:?}...", remote_endpoint);
+        let r = socket.connect(remote_endpoint).await;
+        if let Err(e) = r {
+            warn!("connect error: {:?}", e);
+            embassy_time::Timer::after(Duration::from_secs(1)).await;
+            continue;
+        }
+        break;
     }
     info!("connected!");
     for i in 0.. {
