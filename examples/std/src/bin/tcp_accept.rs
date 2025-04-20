@@ -2,20 +2,20 @@ use clap::Parser;
 use embassy_executor::{Executor, Spawner};
 use embassy_net::tcp::TcpSocket;
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, StackResources};
-use embassy_net_tuntap::TunTapDevice;
 use embassy_time::{Duration, Timer};
 use embedded_io_async::Write as _;
 use heapless::Vec;
 use log::*;
 use rand_core::{OsRng, RngCore};
 use static_cell::StaticCell;
+use tappers::embassy::TunTapDevice;
 
 #[derive(Parser)]
 #[clap(version = "1.0")]
 struct Opts {
     /// TAP device name
-    #[clap(long, default_value = "tap0")]
-    tap: String,
+    #[clap(long)]
+    tap: Option<String>,
     /// use a static IP instead of DHCP
     #[clap(long)]
     static_ip: bool,
@@ -31,7 +31,12 @@ async fn main_task(spawner: Spawner) {
     let opts: Opts = Opts::parse();
 
     // Init network device
-    let device = TunTapDevice::new(&opts.tap).unwrap();
+    let device = if let Some(dev) = opts.tap {
+        TunTapDevice::new_named(tappers::Interface::new(dev).expect("Invalid interface name"))
+    } else {
+        TunTapDevice::new()
+    }
+    .expect("Failed to create TUN device");
 
     // Choose between dhcp or static ip
     let config = if opts.static_ip {
